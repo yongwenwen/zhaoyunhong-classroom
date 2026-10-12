@@ -197,7 +197,10 @@ else{
   const firebaseConfig={apiKey:"AIzaSyDr-viu5cV4mpCQbecNI94AW9qBSwbQt4c",authDomain:"zhaoyunhong-classroom.firebaseapp.com",databaseURL:"https://zhaoyunhong-classroom-default-rtdb.asia-southeast1.firebasedatabase.app",projectId:"zhaoyunhong-classroom",storageBucket:"zhaoyunhong-classroom.firebasestorage.app",messagingSenderId:"777889730793",appId:"1:777889730793:web:07e1cd7ea049df885ce078"};
   try{
     if(!firebase.apps.length)firebase.initializeApp(firebaseConfig);
-    firebase.auth().signInAnonymously().then(userCredential=>{
+    Promise.race([
+      firebase.auth().signInAnonymously(),
+      new Promise((_,reject)=>setTimeout(()=>reject(new Error('登录请求超过 12 秒没有响应。请检查手机网络是否能访问 identitytoolkit.googleapis.com，或尝试切换网络。')),12000))
+    ]).then(userCredential=>{
       reflectionUser=userCredential.user;cloudConnected=true;submitReflectionButton.disabled=false;
       reflectionFeedback.textContent='已连接共享词云。提交后，其他手机和电脑也能看到。';
       firebase.database().ref('classroomWordcloud/submissions').on('value',snapshot=>{
