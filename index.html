@@ -155,9 +155,7 @@
 <section class="section wordcloud-section" id="wordcloud"><div class="section-head"><div><div class="kicker">06 / CLASSROOM REFLECTION CLOUD</div><h2>感悟词云 · 让精神看得见</h2></div><p>选择关键词或写下感受，点击加入词云。词语会逐步浮现、轻轻漂浮，字号随出现次数变化。</p></div><div class="wordcloud-panel"><div class="wordcloud-intro"><span class="cloud-seal">★</span><div><h3>每一份感悟，都是一束微光</h3><p>医者仁心 · 责任担当 · 家国情怀 · 求真务实</p></div><span class="cloud-live"><i></i> 实时生长</span></div><div class="reflection-prompts" id="reflectionPrompts"><button class="reflection-chip" type="button" data-word="医者仁心">医者仁心</button><button class="reflection-chip" type="button" data-word="责任担当">责任担当</button><button class="reflection-chip" type="button" data-word="家国情怀">家国情怀</button><button class="reflection-chip" type="button" data-word="求真务实">求真务实</button><button class="reflection-chip" type="button" data-word="人才培养">人才培养</button><button class="reflection-chip" type="button" data-word="传承精神">传承精神</button></div><textarea class="reflection-text" id="reflectionInput" maxlength="180" placeholder="写下你从赵云宏的经历中读到的精神力量……"></textarea><div class="closing-actions"><button class="closing-btn" type="button" id="submitReflection">加入词云 ↗</button><button class="closing-btn secondary" type="button" id="clearReflection">清空输入</button></div><p class="closing-feedback" id="reflectionFeedback" aria-live="polite">正在连接共享词云……</p><div class="reflection-cloud" id="reflectionCloud" aria-label="课堂感悟词云"><span class="cloud-empty">等待第一份感悟……<br/>选择关键词或提交一段感受，让词云慢慢生长。</span></div><div class="cloud-caption" id="cloudCaption">还没有收到分享 · 词语大小反映当前页面中的出现次数</div><p class="cloud-footnote">以仁心守护生命，以担当回应时代</p></div></section>
 <button aria-label="返回顶部" class="backtop" id="backtop">↑</button>
 </div>
-<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+<script src="https://static.cloudbase.net/cloudbase-js-sdk/2.28.6/cloudbase.full.js"></script>
 <script>
 
 if(document.getElementById('question')&&document.getElementById('quizHint')&&document.getElementById('answers')&&document.getElementById('feedback')&&document.getElementById('quizCounter')&&document.getElementById('nextBtn')){
@@ -190,44 +188,44 @@ function renderReflectionCloud(){
   cloudCaption.textContent=`已汇入 ${reflectionShares} 份感悟 · 收集到 ${words.length} 个不同关键词 · 多设备共享`;
 }
 function showSharedReflectionError(message){reflectionFeedback.textContent=message;cloudCaption.textContent='共享词云暂时无法连接，请检查网络或数据库设置。';}
-submitReflectionButton.disabled=true;
-reflectionFeedback.textContent='正在连接共享词云……';
-if(!window.firebase){showSharedReflectionError('共享组件加载失败，请刷新页面或检查网络连接。');}
-else{
-  const firebaseConfig={apiKey:"AIzaSyDr-viu5cV4mpCQbecNI94AW9qBSwbQt4c",authDomain:"zhaoyunhong-classroom.firebaseapp.com",databaseURL:"https://zhaoyunhong-classroom-default-rtdb.asia-southeast1.firebasedatabase.app",projectId:"zhaoyunhong-classroom",storageBucket:"zhaoyunhong-classroom.firebasestorage.app",messagingSenderId:"777889730793",appId:"1:777889730793:web:07e1cd7ea049df885ce078"};
-  try{
-    if(!firebase.apps.length)firebase.initializeApp(firebaseConfig);
-    Promise.race([
-      firebase.auth().signInAnonymously(),
-      new Promise((_,reject)=>setTimeout(()=>reject(new Error('登录请求超过 12 秒没有响应。请检查手机网络是否能访问 identitytoolkit.googleapis.com，或尝试切换网络。')),12000))
-    ]).then(userCredential=>{
-      reflectionUser=userCredential.user;cloudConnected=true;submitReflectionButton.disabled=false;
-      reflectionFeedback.textContent='已连接共享词云。提交后，其他手机和电脑也能看到。';
-      firebase.database().ref('classroomWordcloud/submissions').on('value',snapshot=>{
-        reflectionCounts.clear();reflectionShares=0;
-        snapshot.forEach(userSnapshot=>{userSnapshot.forEach(submissionSnapshot=>{
-          const item=submissionSnapshot.val();if(!item||typeof item.text!=='string')return;
-          const terms=extractReflectionTerms(item.text);if(!terms.length)return;
-          reflectionShares++;terms.forEach(word=>reflectionCounts.set(word,(reflectionCounts.get(word)||0)+1));
-        })});
-        renderReflectionCloud();
-      },error=>{showSharedReflectionError('读取共享词云失败：'+(error&&error.message?error.message:'请检查数据库规则。'));});
-    }).catch(error=>{showSharedReflectionError('匿名登录失败：'+(error&&error.message?error.message:'请检查 Firebase Authentication 设置。'));});
-  }catch(error){showSharedReflectionError('共享词云初始化失败，请检查 Firebase 配置。');}
+let cloudDb=null,cloudWatcher=null,cloudConnected=false;
+function replaceSharedCloud(docs){
+  reflectionCounts.clear();reflectionShares=0;
+  const records=Array.isArray(docs)?docs:Object.values(docs||{});
+  records.forEach(item=>{if(!item||typeof item.text!=='string')return;const terms=extractReflectionTerms(item.text);if(!terms.length)return;reflectionShares++;terms.forEach(word=>reflectionCounts.set(word,(reflectionCounts.get(word)||0)+1));});
+  renderReflectionCloud();
 }
+function showSharedReflectionError(message){reflectionFeedback.textContent=message;cloudCaption.textContent='共享词云暂时无法连接，请检查网络或 CloudBase 设置。';}
+async function connectSharedCloud(){
+  submitReflectionButton.disabled=true;reflectionFeedback.textContent='正在连接共享词云……';
+  if(!window.cloudbase){showSharedReflectionError('共享组件加载失败，请刷新页面或检查网络连接。');return;}
+  try{
+    const cloudApp=cloudbase.init({env:'zhaoyunhong-classroo-d5a5ec4d466',region:'ap-shanghai'});
+    const cloudAuth=cloudApp.auth();
+    await cloudAuth.signInAnonymously();
+    cloudDb=cloudApp.database();
+    cloudConnected=true;
+    cloudWatcher=cloudDb.collection('classroomWordcloudSubmissions').orderBy('createdAt','asc').limit(1000).watch({
+      onChange(snapshot){replaceSharedCloud(snapshot.docs);reflectionFeedback.textContent='已连接共享词云。提交后，其他手机和电脑也能看到。';},
+      onError(error){showSharedReflectionError('读取共享词云失败：'+(error&&error.message?error.message:'请检查 CloudBase 数据库权限。'));}
+    });
+    submitReflectionButton.disabled=false;
+  }catch(error){showSharedReflectionError('连接共享词云失败：'+(error&&error.message?error.message:'请检查 CloudBase 安全来源、匿名登录和数据库权限。'));}
+}
+connectSharedCloud();
 submitReflectionButton.addEventListener('click',async()=>{
   const raw=reflectionInput.value.trim();
-  if(!raw){reflectionFeedback.textContent='先选择一个关键词，或写下一句感悟吧。';return}
-  if(raw.length>180){reflectionFeedback.textContent='感悟请控制在 180 个字符以内。';return}
-  if(!reflectionUser||!cloudConnected){reflectionFeedback.textContent='共享词云仍在连接，请稍候再试。';return}
+  if(!raw){reflectionFeedback.textContent='先选择一个关键词，或写下一句感悟吧。';return;}
+  if(raw.length>180){reflectionFeedback.textContent='感悟请控制在 180 个字符以内。';return;}
+  if(!cloudDb||!cloudConnected){reflectionFeedback.textContent='共享词云仍在连接，请稍候再试。';return;}
   const unique=extractReflectionTerms(raw);
-  if(!unique.length){reflectionFeedback.textContent='再写具体一点，试试“责任担当”“医者仁心”等关键词。';return}
+  if(!unique.length){reflectionFeedback.textContent='再写具体一点，试试“责任担当”“医者仁心”等关键词。';return;}
   submitReflectionButton.disabled=true;
   try{
-    await firebase.database().ref('classroomWordcloud/submissions/'+reflectionUser.uid).push({text:raw,createdAt:firebase.database.ServerValue.TIMESTAMP});
+    await cloudDb.collection('classroomWordcloudSubmissions').add({text:raw,createdAt:Date.now()});
     reflectionFeedback.textContent='提交成功！这份感悟已同步到共享词云。';
     reflectionInput.value='';document.querySelectorAll('.reflection-chip').forEach(x=>x.classList.remove('active'));
-  }catch(error){reflectionFeedback.textContent='提交失败：'+(error&&error.message?error.message:'请检查数据库安全规则和网络连接。');}
+  }catch(error){reflectionFeedback.textContent='提交失败：'+(error&&error.message?error.message:'请检查 CloudBase 数据库权限和网络连接。');}
   finally{submitReflectionButton.disabled=false;}
 });
 document.getElementById('clearReflection').addEventListener('click',()=>{reflectionInput.value='';document.querySelectorAll('.reflection-chip').forEach(x=>x.classList.remove('active'));reflectionFeedback.textContent='输入已清空，可以重新选择关键词或书写感悟。'});
