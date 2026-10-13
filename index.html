@@ -219,6 +219,17 @@ async function bmobRequest(path,options={}){
   if(!response.ok)throw new Error(data.error||data.msg||('HTTP '+response.status));
   return data;
 }
+function replaceSharedCloud(rows){
+  reflectionCounts.clear();reflectionShares=0;
+  (rows||[]).forEach(item=>{
+    if(!item||typeof item.text!=='string')return;
+    const terms=extractReflectionTerms(item.text);
+    if(!terms.length)return;
+    reflectionShares++;
+    terms.forEach(word=>reflectionCounts.set(word,(reflectionCounts.get(word)||0)+1));
+  });
+  renderReflectionCloud();
+}
 async function loadSharedCloud(){
   if(!cloudConnected)return;
   const query=new URLSearchParams({limit:'500',order:'createdAt'});
