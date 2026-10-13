@@ -10,7 +10,7 @@
 
 在应用的「数据」中创建 Class：
 
-- Class 名称：`ClassroomWordcloudSubmission`
+- Class 名称：`ClassroomWordclo`
 - 字段：`text`，类型为字符串
 - `createdAt` 由 Bmob 自动生成，不需要创建
 
@@ -39,7 +39,7 @@
 
 代码分支中的 `index.html` 已填写 API 域名、Application ID 和 REST API Key。合并到 `main` 前，请先确认：
 
-- `ClassroomWordcloudSubmission` 表已经创建，且含字符串字段 `text`
+- `ClassroomWordclo` 表已经创建，且含字符串字段 `text`
 - 表 ACL 允许公开读取和创建，禁止公开更新、删除
 - Bmob 控制台中的 API 域名与页面配置一致
 
