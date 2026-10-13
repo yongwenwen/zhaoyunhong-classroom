@@ -229,7 +229,7 @@ submitReflectionButton.addEventListener('click',async()=>{
   if(!unique.length){reflectionFeedback.textContent='再写具体一点，试试“责任担当”“医者仁心”等关键词。';return;}
   submitReflectionButton.disabled=true;
   try{
-    const result=await cloudDb.from('classroomWordcloudSubmissions').insert({text:raw,created_at:Date.now()});
+    const result=await cloudDb.from('classroomWordcloudSubmissions').insert({text:raw,created_at:new Date().toISOString()});
     if(result.error)throw result.error;
     await loadSharedCloud();reflectionFeedback.textContent='提交成功！这份感悟已同步到共享词云。';
     reflectionInput.value='';document.querySelectorAll('.reflection-chip').forEach(x=>x.classList.remove('active'));
