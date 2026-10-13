@@ -35,15 +35,15 @@
 
 不要复制 Master Key。
 
-## 5. 填写页面配置
+## 5. 发布前确认
 
-编辑 `index.html` 中的 `BMOB_WORDCLOUD` 配置，替换：
+代码分支中的 `index.html` 已填写 API 域名、Application ID 和 REST API Key。合并到 `main` 前，请先确认：
 
-- `apiBase`：控制台给出的 API 测试域名，保留 `https://`，不要附加 `/1`
-- `applicationId`：Application ID
-- `restApiKey`：REST API Key
+- `ClassroomWordcloudSubmission` 表已经创建，且含字符串字段 `text`
+- 表 ACL 允许公开读取和创建，禁止公开更新、删除
+- Bmob 控制台中的 API 域名与页面配置一致
 
-确认 Class 名称为 `ClassroomWordcloudSubmission`。保存后将更改发布到 GitHub Pages。提交数据通过 Bmob 保存，现有网页地址和二维码无需改变。
+公开网页中的 REST API Key 对访问者可见，因此必须保持上述表权限。不要把 Master Key 放进网页。合并后 GitHub Pages 会通过 Bmob 保存提交；现有网页地址和二维码无需改变。
 
 ## 来源
 
