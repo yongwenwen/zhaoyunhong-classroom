@@ -206,7 +206,7 @@ function bmobConfigured(){
     BMOB_WORDCLOUD.restApiKey!=='请填写RESTAPIKey';
 }
 async function bmobRequest(path,options={}){
-  const response=await fetch(BMOB_WORDCLOUD.apiBase.replace(/\\/$/, '')+'/1/'+path,{
+  const response=await fetch(BMOB_WORDCLOUD.apiBase.replace(/\/$/, '')+'/1/'+path,{
     method:options.method||'GET',
     headers:{
       'X-Bmob-Application-Id':BMOB_WORDCLOUD.applicationId,
