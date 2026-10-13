@@ -155,7 +155,7 @@
 <section class="section wordcloud-section" id="wordcloud"><div class="section-head"><div><div class="kicker">06 / CLASSROOM REFLECTION CLOUD</div><h2>感悟词云 · 让精神看得见</h2></div><p>选择关键词或写下感受，点击加入词云。词语会逐步浮现、轻轻漂浮，字号随出现次数变化。</p></div><div class="wordcloud-panel"><div class="wordcloud-intro"><span class="cloud-seal">★</span><div><h3>每一份感悟，都是一束微光</h3><p>医者仁心 · 责任担当 · 家国情怀 · 求真务实</p></div><span class="cloud-live"><i></i> 实时生长</span></div><div class="reflection-prompts" id="reflectionPrompts"><button class="reflection-chip" type="button" data-word="医者仁心">医者仁心</button><button class="reflection-chip" type="button" data-word="责任担当">责任担当</button><button class="reflection-chip" type="button" data-word="家国情怀">家国情怀</button><button class="reflection-chip" type="button" data-word="求真务实">求真务实</button><button class="reflection-chip" type="button" data-word="人才培养">人才培养</button><button class="reflection-chip" type="button" data-word="传承精神">传承精神</button></div><textarea class="reflection-text" id="reflectionInput" maxlength="180" placeholder="写下你从赵云宏的经历中读到的精神力量……"></textarea><div class="closing-actions"><button class="closing-btn" type="button" id="submitReflection">加入词云 ↗</button><button class="closing-btn secondary" type="button" id="clearReflection">清空输入</button></div><p class="closing-feedback" id="reflectionFeedback" aria-live="polite">正在连接共享词云……</p><div class="reflection-cloud" id="reflectionCloud" aria-label="课堂感悟词云"><span class="cloud-empty">等待第一份感悟……<br/>选择关键词或提交一段感受，让词云慢慢生长。</span></div><div class="cloud-caption" id="cloudCaption">还没有收到分享 · 词语大小反映当前页面中的出现次数</div><p class="cloud-footnote">以仁心守护生命，以担当回应时代</p></div></section>
 <button aria-label="返回顶部" class="backtop" id="backtop">↑</button>
 </div>
-<script src="https://static.cloudbase.net/cloudbase-js-sdk/3.0.1/cloudbase.full.js"></script>
+
 <script>
 
 if(document.getElementById('question')&&document.getElementById('quizHint')&&document.getElementById('answers')&&document.getElementById('feedback')&&document.getElementById('quizCounter')&&document.getElementById('nextBtn')){
@@ -174,7 +174,7 @@ if(choiceGrid){let choiceScore=0,choiceAnswered=0,pageIndex=0,pageAnswered=0;con
 const closingQuestions=document.querySelectorAll('.closing-question');closingQuestions.forEach(button=>button.addEventListener('click',()=>{const answer=button.nextElementSibling;const open=button.getAttribute('aria-expanded')==='true';button.setAttribute('aria-expanded',String(!open));answer.classList.toggle('open',!open);button.querySelector('.qmark').textContent=open?'＋':'－'}));
 const reflectionInput=document.getElementById('reflectionInput'),reflectionFeedback=document.getElementById('reflectionFeedback'),reflectionCloud=document.getElementById('reflectionCloud'),cloudCaption=document.getElementById('cloudCaption');
 const submitReflectionButton=document.getElementById('submitReflection');
-const reflectionCounts=new Map();let reflectionShares=0;let reflectionUser=null;let cloudConnected=false;
+const reflectionCounts=new Map();let reflectionShares=0;
 const wordPalette=['#8f252b','#b84238','#9e7544','#76513b','#a45d4d','#bd9456','#633035'];
 const reflectionStopWords=new Set(['我们','他们','自己','可以','觉得','通过','一个','这种','以及','因为','所以','赵云宏','人物','历史','感悟','让我','更加','非常','就是']);
 function extractReflectionTerms(raw){const terms=raw.match(/[\u4e00-\u9fff]{2,8}|[A-Za-z0-9]{2,}/g)||[];return [...new Set(terms.map(x=>x.trim()).filter(x=>x&&!reflectionStopWords.has(x)))];}
@@ -187,56 +187,95 @@ function renderReflectionCloud(){
   words.forEach(([word,count],i)=>{const span=document.createElement('span');span.className='cloud-word';span.textContent=word;span.style.fontSize=(15+Math.round(count/max*23))+'px';span.style.color=wordPalette[i%wordPalette.length];span.style.animationDelay=(i*25)+'ms';span.title='出现 '+count+' 次';reflectionCloud.appendChild(span)});
   cloudCaption.textContent=`已汇入 ${reflectionShares} 份感悟 · 收集到 ${words.length} 个不同关键词 · 多设备共享`;
 }
-function showSharedReflectionError(message){reflectionFeedback.textContent=message;cloudCaption.textContent='共享词云暂时无法连接，请检查网络或数据库设置。';}
-let cloudDb=null,cloudPoll=null,cloudChannel=null,cloudConnected=false;
-function replaceSharedCloud(rows){
-  reflectionCounts.clear();reflectionShares=0;
-  (rows||[]).forEach(item=>{if(!item||typeof item.text!=='string')return;const terms=extractReflectionTerms(item.text);if(!terms.length)return;reflectionShares++;terms.forEach(word=>reflectionCounts.set(word,(reflectionCounts.get(word)||0)+1));});
-  renderReflectionCloud();
+// Bmob 配置：在 Bmob 控制台创建应用和 API 测试域名后填写。不要填 Master Key。
+const BMOB_WORDCLOUD={
+  apiBase:'https://api.codenow.cn',
+  applicationId:'b94299cac30611c09ecc5ae77d7e7a78',
+  restApiKey:'3d96f6ed2621a4805300e2d220387046',
+  className:'ClassroomWordclo'
+};
+let cloudPoll=null,cloudConnected=false;
+function showSharedReflectionError(message){
+  reflectionFeedback.textContent=message;
+  cloudCaption.textContent='共享词云暂时无法连接，请检查网络或 Bmob 设置。';
 }
-function showSharedReflectionError(message){reflectionFeedback.textContent=message;cloudCaption.textContent='共享词云暂时无法连接，请检查网络或 CloudBase 设置。';}
+function bmobConfigured(){
+  return BMOB_WORDCLOUD.apiBase.startsWith('https://')&&
+    !BMOB_WORDCLOUD.apiBase.includes('请替换')&&
+    BMOB_WORDCLOUD.applicationId!=='请填写ApplicationId'&&
+    BMOB_WORDCLOUD.restApiKey!=='请填写RESTAPIKey';
+}
+async function bmobRequest(path,options={}){
+  const response=await fetch(BMOB_WORDCLOUD.apiBase.replace(/\/$/, '')+'/1/'+path,{
+    method:options.method||'GET',
+    headers:{
+      'X-Bmob-Application-Id':BMOB_WORDCLOUD.applicationId,
+      'X-Bmob-REST-API-Key':BMOB_WORDCLOUD.restApiKey,
+      'Content-Type':'application/json'
+    },
+    body:options.body?JSON.stringify(options.body):undefined
+  });
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok)throw new Error(data.error||data.msg||('HTTP '+response.status));
+  return data;
+}
 async function loadSharedCloud(){
-  if(!cloudDb)return;
-  const result=await cloudDb.from('classroomWordcloudSubmissions').select('text,created_at').order('created_at',{ascending:true}).limit(1000);
-  if(result.error)throw result.error;
-  replaceSharedCloud(result.data);
+  if(!cloudConnected)return;
+  const query=new URLSearchParams({limit:'500',order:'createdAt'});
+  const result=await bmobRequest('classes/'+BMOB_WORDCLOUD.className+'?'+query.toString());
+  replaceSharedCloud(result.results||[]);
 }
 async function connectSharedCloud(){
-  submitReflectionButton.disabled=true;reflectionFeedback.textContent='正在连接共享词云……';
-  if(!window.cloudbase){showSharedReflectionError('共享组件加载失败，请刷新页面或检查网络连接。');return;}
+  submitReflectionButton.disabled=true;
+  if(!bmobConfigured()){
+    showSharedReflectionError('共享词云尚未完成 Bmob 配置。');
+    cloudCaption.textContent='请先填写页面脚本中的 Bmob 应用配置，再提交分享。';
+    return;
+  }
+  reflectionFeedback.textContent='正在连接共享词云……';
   try{
-    const cloudApp=cloudbase.init({env:'zhaoyunhong-classroo-d5a5ec4d466',region:'ap-shanghai'});
-    const cloudAuth=cloudApp.auth;
-    const signIn=await cloudAuth.signInAnonymously();
-    if(signIn&&signIn.error)throw signIn.error;
-    cloudDb=cloudApp.rdb();
-    await loadSharedCloud();cloudConnected=true;submitReflectionButton.disabled=false;
+    cloudConnected=true;
+    await loadSharedCloud();
+    submitReflectionButton.disabled=false;
     reflectionFeedback.textContent='已连接共享词云。提交后，其他手机和电脑也能看到。';
-    cloudPoll=setInterval(()=>loadSharedCloud().catch(()=>{}),3000);
-    try{
-      cloudChannel=cloudApp.realtime().channel('classroom-wordcloud');
-      cloudChannel.on('postgres_changes',{event:'*',schema:'public',table:'classroomWordcloudSubmissions'},()=>loadSharedCloud().catch(()=>{})).subscribe();
-    }catch(error){}
-  }catch(error){showSharedReflectionError('连接共享词云失败：'+(error&&error.message?error.message:'请检查 CloudBase 安全来源、匿名登录和 PostgreSQL 表权限。'));}
+    if(cloudPoll)clearInterval(cloudPoll);
+    cloudPoll=setInterval(()=>{
+      if(!document.hidden)loadSharedCloud().catch(()=>{});
+    },15000);
+    document.addEventListener('visibilitychange',()=>{
+      if(!document.hidden)loadSharedCloud().catch(()=>{});
+    });
+  }catch(error){
+    cloudConnected=false;
+    showSharedReflectionError('连接 Bmob 失败：'+(error&&error.message?error.message:'请检查 API 测试域名、密钥和表权限。'));
+  }
 }
 connectSharedCloud();
 submitReflectionButton.addEventListener('click',async()=>{
   const raw=reflectionInput.value.trim();
   if(!raw){reflectionFeedback.textContent='先选择一个关键词，或写下一句感悟吧。';return;}
   if(raw.length>180){reflectionFeedback.textContent='感悟请控制在 180 个字符以内。';return;}
-  if(!cloudDb||!cloudConnected){reflectionFeedback.textContent='共享词云仍在连接，请稍候再试。';return;}
+  if(!cloudConnected){reflectionFeedback.textContent='共享词云仍在连接，请稍候再试。';return;}
   const unique=extractReflectionTerms(raw);
   if(!unique.length){reflectionFeedback.textContent='再写具体一点，试试“责任担当”“医者仁心”等关键词。';return;}
   submitReflectionButton.disabled=true;
   try{
-    const result=await cloudDb.from('classroomWordcloudSubmissions').insert({text:raw,created_at:new Date().toISOString()});
-    if(result.error)throw result.error;
-    await loadSharedCloud();reflectionFeedback.textContent='提交成功！这份感悟已同步到共享词云。';
-    reflectionInput.value='';document.querySelectorAll('.reflection-chip').forEach(x=>x.classList.remove('active'));
-  }catch(error){reflectionFeedback.textContent='提交失败：'+(error&&error.message?error.message:'请检查 CloudBase PostgreSQL 表权限和网络连接。');}
-  finally{submitReflectionButton.disabled=false;}
+    await bmobRequest('classes/'+BMOB_WORDCLOUD.className,{method:'POST',body:{text:raw}});
+    await loadSharedCloud();
+    reflectionFeedback.textContent='提交成功！这份感悟已同步到共享词云。';
+    reflectionInput.value='';
+    document.querySelectorAll('.reflection-chip').forEach(x=>x.classList.remove('active'));
+  }catch(error){
+    reflectionFeedback.textContent='提交失败：'+(error&&error.message?error.message:'请检查 Bmob 表权限和网络连接。');
+  }finally{
+    submitReflectionButton.disabled=false;
+  }
 });
-document.getElementById('clearReflection').addEventListener('click',()=>{reflectionInput.value='';document.querySelectorAll('.reflection-chip').forEach(x=>x.classList.remove('active'));reflectionFeedback.textContent='输入已清空，可以重新选择关键词或书写感悟。'});
+document.getElementById('clearReflection').addEventListener('click',()=>{
+  reflectionInput.value='';
+  document.querySelectorAll('.reflection-chip').forEach(x=>x.classList.remove('active'));
+  reflectionFeedback.textContent='输入已清空，可以重新选择关键词或书写感悟。';
+});
 
 // 本地内嵌背景音乐：循环播放、柔和淡入淡出；需用户点击后启动以符合浏览器自动播放限制。
 (()=>{
